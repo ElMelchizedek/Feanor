@@ -1,0 +1,11 @@
+<!DOCTYPE html>
+<body>
+    <h3>recommend me a film</h3>
+    <form action="/" method="post">
+        <input type="text" name="film" placeholder="Enter a film" required />
+        <input type="submit" value="Select" />
+    </form>
+    {% if result %}
+    <div class="result">You have selected {{ result }}.</div>
+    {% endif %}
+</body>
