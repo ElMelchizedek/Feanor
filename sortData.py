@@ -1,6 +1,7 @@
 import os
 import sys
 import pandas as pd
+import numpy as np
 import statistics as stat
 
 movie = None
@@ -46,7 +47,7 @@ def main(Debug):
             ratingCol.insert(i, (str(stat.median(average))))
         else:
             Debug.alert("noRating", None, None)
-            ratingCol.insert(i, 0.0)
+            ratingCol.insert(i, np.nan)
         tagCol.insert(i, ([(tag["tag"][tagI]) for tagI in tag.loc[tag["movieId"] == movieI+1].index]))
         tagCol[i] = [str(x).lower() for x in tagCol[i]]
         tagCol[i] = [str(x).replace(" ","") for x in tagCol[i]]
@@ -55,7 +56,7 @@ def main(Debug):
         if tagCol[i]:
             Debug.alert("tag", None, None)
         else:
-            tagCol[i] = ""
+            tagCol[i] = np.nan
             Debug.alert("noTag", None, None)
         i += 1
 
@@ -67,6 +68,7 @@ def main(Debug):
             "tags": tagCol
         }
     )
+    complete = complete.dropna()
     print("\033[33m" + "Data sorting completed.")
     print("\033[37m", end="")
     complete.to_csv("complete.csv", index=False)
