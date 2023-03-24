@@ -1,16 +1,14 @@
+#!/usr/bin/python
 import os
 import sys
 import pandas as pd
 import numpy as np
 import statistics as stat
-
-movie = None
-rating = None
-tag = None
+import re
 
 os.system("")
 
-class debug():
+class Debug():
     def __init__(self):
         self.toggle = False
     
@@ -34,19 +32,31 @@ class debug():
                 print("\033[36m" + "DEBUG ENABLED.")
             print("\033[37m", end="")
 
-def main(Debug):
+def main(z):
+    debug = Debug()
+    if z == True:
+        debug.enable()
+    else:
+        pass
+    print("Loading data files...")
+    global movie
+    movie = pd.read_csv("data/movies.csv")
+    rating = pd.read_csv("data/ratings.csv")
+    tag = pd.read_csv("data/tags.csv")
     i = 0
     ratingCol = []
     tagCol = []
+    titleCol = []
+    yearCol = []
     print("Sorting...")
     for movieI in movie.index:
-        Debug.alert("index", movieI, movie.index.stop)
+        debug.alert("index", movieI, movie.index.stop)
         average = [rating["rating"][ratingI] for ratingI in rating.loc[rating["movieId"] == movieI+1].index]
         if average:
-            Debug.alert("rating", None, None)
+            debug.alert("rating", None, None)
             ratingCol.insert(i, (str(stat.median(average))))
         else:
-            Debug.alert("noRating", None, None)
+            debug.alert("noRating", None, None)
             ratingCol.insert(i, np.nan)
         tagCol.insert(i, ([(tag["tag"][tagI]) for tagI in tag.loc[tag["movieId"] == movieI+1].index]))
         tagCol[i] = [str(x).lower() for x in tagCol[i]]
@@ -54,15 +64,19 @@ def main(Debug):
         tagCol[i] = list(dict.fromkeys(tagCol[i]))
         tagCol[i] = "_".join(tagCol[i])
         if tagCol[i]:
-            Debug.alert("tag", None, None)
+            debug.alert("tag", None, None)
         else:
             tagCol[i] = np.nan
-            Debug.alert("noTag", None, None)
+            debug.alert("noTag", None, None)
+        titleCol.append(movie["title"][i].split(" (")[0])
+        yearCol.append(re.sub("[()]", "", movie["title"][0].split(" ")[-1]))
         i += 1
+        
 
     complete = pd.DataFrame(
         {
-            "title": movie["title"],
+            "title": titleCol,
+            "year": yearCol,
             "genres": movie["genres"],
             "ratings": ratingCol,
             "tags": tagCol
@@ -71,17 +85,13 @@ def main(Debug):
     complete = complete.dropna()
     print("\033[33m" + "Data sorting completed.")
     print("\033[37m", end="")
-    complete.to_csv("complete.csv", index=False)
+    complete.to_csv("data/complete.csv", index=True)
+    #return(complete)
     
 
 if __name__ == "__main__":
-    Debug = debug()
     if len(sys.argv) >= 2 and sys.argv[1] == "-debug":
-        Debug.enable()
+        z = True
     elif len(sys.argv) < 2 or sys.argv[1] != '-debug':
-        pass
-    print("Loading data files...")
-    movie = pd.read_csv("data/movies.csv")
-    rating = pd.read_csv("data/ratings.csv")
-    tag = pd.read_csv("data/tags.csv")
-    main(Debug)
+        z = False
+    main(z)
