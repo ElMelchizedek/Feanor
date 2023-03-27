@@ -21,27 +21,33 @@ def findSimilarFilms(title):
     else:
         data = pd.read_csv("data/complete.csv")
     combinedData = []
-    i = 0
     for dataI in data.index:
         try:
-            cleanTags = re.sub(r'[^\w\s]', '', data["tags"][i])
+            cleanTags = re.sub(r'[^\w\s]', '', data["tags"][dataI])
         except:
             print("Could not get clean tag.", flush=True)
         try:
-            cleanGenres = re.sub(r'[^\w\s]', '', data["genres"][i])
+            cleanGenres = re.sub(r'[^\w\s]', '', data["genres"][dataI])
         except:
             print("Could not get clean genres.", flush=True)
         try:
             combinedData.append(str(cleanTags) + "_" + str(cleanGenres))
         except:
             print("Could not append to combinedData", flush=True)
-        i += 1
+        
     countMatrix = cv.fit_transform(combinedData)
     similarityScores = cosine_similarity(countMatrix)
     filmIndex = data[data.title == title].index.values[0]
-    similarFilms = list(enumerate(cosine_similarity(countMatrix)[filmIndex]))
-    similarFilms = sorted(similarFilms, key=lambda x : x[1], reverse = True)[1:]
-    similarFilms = list([data[data.index == similarFilms[x][0]]["title"].values[0] for x in range(5)])
+    weightedSimilarityScores = []
+    for i in range(len(similarityScores)):
+        ratingRaw = data.loc[i, "rating"]
+        ratingClean = re.sub(r'[^\d\.]', '', ratingRaw)
+        ratingProper = float(ratingClean)
+        weightedSimilarity = similarityScores[filmIndex][i] * ratingProper
+        weightedSimilarityScores.append(weightedSimilarity)
+    
+    similarFilms = sorted(list(enumerate(weightedSimilarityScores)), key=lambda x: x[1], reverse=True)[1:6]
+    similarFilms = [data.iloc[i[0]]['title'] for i in similarFilms]
     print(similarFilms)
     return(similarFilms)
 
