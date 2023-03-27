@@ -47,7 +47,7 @@ def main():
             bar.update(i)
     
 
-    print("\nAssembling...")
+    print("Assembling...")
     spam = pd.DataFrame(
         {
             "movieId": idArr,
