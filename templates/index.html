@@ -6,6 +6,12 @@
         <input type="submit" value="Select" />
     </form>
     {% if result %}
-    <div class="result">The most similar films to the one you have selected are {{ result }}.</div>
+    <div>The most similar films to the one you have selected are:
+        <ul>
+            {% for film in result %}
+                <li>{{ film }}.</li>
+            {% endfor %}
+        </ul>
+    </div>
     {% endif %}
 </body>

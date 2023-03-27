@@ -24,3 +24,4 @@ tqdm==4.62.3
 urllib3==1.26.7
 Werkzeug==2.0.2
 scikit-learn==1.2.2
+progressbar2==4.2.0

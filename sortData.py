@@ -5,93 +5,82 @@ import pandas as pd
 import numpy as np
 import statistics as stat
 import re
+import itertools
+import math
+import progressbar
+import time
 
 os.system("")
 
-class Debug():
-    def __init__(self):
-        self.toggle = False
-    
-    def enable(self):
-        self.toggle = True
-        self.alert("enabled", None, None)
-
-    def alert(self, option, x, y):
-        if self.toggle == True:
-            if option == "index":
-                print("\033[37m" + "INDEX " + str(x) + " OF " + str(y) + ": " + movie["title"][x])
-            elif option == "noRating":
-                print("\033[31m" + "NO RATING FOUND.")
-            elif option == "rating":
-                print("\033[32m" + "RATING FOUND.")
-            elif option == "noTag":
-                print("\033[31m" + "NO TAGS FOUND.")
-            elif option == "tag":
-                print("\033[32m" + "TAGS FOUND.")
-            elif option == "enabled":
-                print("\033[36m" + "DEBUG ENABLED.")
-            print("\033[37m", end="")
-
-def main(z):
-    debug = Debug()
-    if z == True:
-        debug.enable()
-    else:
-        pass
+def main():
     print("Loading data files...")
-    global movie
-    movie = pd.read_csv("data/movies.csv")
-    rating = pd.read_csv("data/ratings.csv")
-    tag = pd.read_csv("data/tags.csv")
-    i = 0
-    ratingCol = []
-    tagCol = []
-    titleCol = []
-    yearCol = []
-    print("Sorting...")
-    for movieI in movie.index:
-        debug.alert("index", movieI, movie.index.stop)
-        average = [rating["rating"][ratingI] for ratingI in rating.loc[rating["movieId"] == movieI+1].index]
-        if average:
-            debug.alert("rating", None, None)
-            ratingCol.insert(i, (str(stat.median(average))))
-        else:
-            debug.alert("noRating", None, None)
-            ratingCol.insert(i, np.nan)
-        tagCol.insert(i, ([(tag["tag"][tagI]) for tagI in tag.loc[tag["movieId"] == movieI+1].index]))
-        tagCol[i] = [str(x).lower() for x in tagCol[i]]
-        tagCol[i] = [str(x).replace(" ","") for x in tagCol[i]]
-        tagCol[i] = list(dict.fromkeys(tagCol[i]))
-        tagCol[i] = "_".join(tagCol[i])
-        if tagCol[i]:
-            debug.alert("tag", None, None)
-        else:
-            tagCol[i] = np.nan
-            debug.alert("noTag", None, None)
-        titleCol.append(movie["title"][i].split(" (")[0])
-        yearCol.append(re.sub("[()]", "", movie["title"][0].split(" ")[-1]))
-        i += 1
-        
+    completeRaw = pd.concat(map(pd.read_csv, ["data/movies.csv", "data/ratings.csv", "data/genome-tags.csv", "data/genome-scores.csv"])).drop(columns=["userId", "timestamp"])
 
-    complete = pd.DataFrame(
+    idArr = []
+    ratingDict = {}
+    tagArr = []
+    tagKeyDict = {}
+    titleArr = []
+    yearArr = []
+    genresArr = []
+
+
+    print("Sorting...")
+    with progressbar.ProgressBar(max_value=len(completeRaw), redirect_stdout=True) as bar:
+        for (i, row) in zip(range(len(completeRaw)), completeRaw.itertuples()):
+            if isinstance(row.title, str):
+                idArr.append(int(row.movieId))
+                titleArr.append(row.title.split(" (")[0])
+                yearArr.append(re.sub("[()]", "", row.title.split(" ")[-1]))
+            if not pd.isna(row.rating):
+                if not int(row.movieId) in ratingDict:
+                    ratingDict[int(row.movieId)] = [int(row.rating)]
+                else:
+                    ratingDict[int(row.movieId)].append(int(row.rating))
+                    ratingDict[int(row.movieId)] = [round(stat.median(ratingDict[int(row.movieId)]) * 2) / 2]
+            if not pd.isna(row.tag) and not pd.isna(row.tagId):
+                tagKeyDict[row.tagId] = str(row.tag)
+            if not pd.isna(row.relevance):
+                tagArr.append([int(row.movieId), str(tagKeyDict.get(row.tagId)), float(row.relevance)])
+            if not pd.isna(row.genres):
+                genresArr.append(str(row.genres))
+            bar.update(i)
+    
+
+    print("\nAssembling...")
+    spam = pd.DataFrame(
         {
-            "title": titleCol,
-            "year": yearCol,
-            "genres": movie["genres"],
-            "ratings": ratingCol,
-            "tags": tagCol
+            "movieId": idArr,
+            "title": titleArr,
+            "year": yearArr,
+            "genres": genresArr
         }
     )
+
+    ham = pd.DataFrame(list(ratingDict.items()), columns=["movieId", "rating"])
+    eggs = pd.DataFrame(tagArr, columns=["movieId", "tag", "relevance"])
+    sortedTags = pd.DataFrame(columns=["movieId", "tags"])
+    with progressbar.ProgressBar(max_value=len(spam.index), redirect_stdout=True) as bar:
+        for i in range(len(spam.index)):
+            rawTags = eggs[(eggs["movieId"] == i)].sort_values(by="relevance", ascending=False).head(10)
+            tagCol = [rawTags.iloc[x, rawTags.columns.get_loc("tag")] for x in range(len(rawTags.index))]
+            tagCol = [str(x).lower() for x in tagCol]
+            tagCol = [str(x).replace(" ","") for x in tagCol]
+            tagCol = list(dict.fromkeys(tagCol))
+            tagCol = "_".join(tagCol)
+            newTagEntry = pd.Series({'movieId': i, 'tags': tagCol})
+            sortedTags = pd.concat([sortedTags, newTagEntry.to_frame().T], ignore_index=True)
+            bar.update(i)
+
+    complete = pd.DataFrame(columns=["movieId", "title", "year", "genres", "rating", "tags"])
+    complete = pd.merge(spam, ham, on="movieId")
+    complete = pd.merge(complete, sortedTags, on="movieId")
     complete = complete.dropna()
-    print("\033[33m" + "Data sorting completed.")
-    print("\033[37m", end="")
+
+
+    print("Exporting...")
     complete.to_csv("data/complete.csv", index=True)
-    #return(complete)
     
 
 if __name__ == "__main__":
-    if len(sys.argv) >= 2 and sys.argv[1] == "-debug":
-        z = True
-    elif len(sys.argv) < 2 or sys.argv[1] != '-debug':
-        z = False
-    main(z)
+    main()
