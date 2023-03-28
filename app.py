@@ -19,13 +19,14 @@ def generateAIResponse(filmData):
     response = [openai.Completion.create(
         model = "text-davinci-003",
         prompt = "Recommend the film {recTitle} in a long paragraph, emphasising its attributes described following: {recAttr}. Make sure to relate the recommendation back\
-            to the user-selected film {userTitle} and its attributes: {userAttr}. Do this all the while using your own knowledge as well, while keeping the response natural.".format(
+            to the user-selected film {userTitle} and its attributes: {userAttr}. Do this all the while using your own knowledge as well, while keeping the response natural\
+            and adressing the user directly.".format(
             recTitle = filmData[x][0], 
             recAttr = re.sub(r'[_,]', lambda x: ' ' if x.group() == '_' else ', ', filmData[x][1]),
             userTitle = filmData[0][0],
             userAttr = re.sub(r'[_,]', lambda x: ' ' if x.group() == '_' else ', ', filmData[0][1])
             ),
-        temperature = 0.6,
+        temperature = 1,
         max_tokens = 500
     ) for x in range(1, len(filmData))]
     return(response)
