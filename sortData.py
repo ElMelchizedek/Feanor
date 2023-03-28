@@ -62,12 +62,12 @@ def main():
     sortedTags = pd.DataFrame(columns=["movieId", "tags"])
     with progressbar.ProgressBar(max_value=len(spam.index), redirect_stdout=True) as bar:
         for i in range(len(spam.index)):
-            rawTags = eggs[(eggs["movieId"] == i)].sort_values(by="relevance", ascending=False).head(10)
+            rawTags = eggs[(eggs["movieId"] == i)].sort_values(by="relevance", ascending=False).head(20)
             tagCol = [rawTags.iloc[x, rawTags.columns.get_loc("tag")] for x in range(len(rawTags.index))]
             tagCol = [str(x).lower() for x in tagCol]
-            tagCol = [str(x).replace(" ","") for x in tagCol]
+            tagCol = [str(x).replace(" ","_") for x in tagCol]
             tagCol = list(dict.fromkeys(tagCol))
-            tagCol = "_".join(tagCol)
+            tagCol = ",".join(tagCol)
             newTagEntry = pd.Series({'movieId': i, 'tags': tagCol})
             sortedTags = pd.concat([sortedTags, newTagEntry.to_frame().T], ignore_index=True)
             bar.update(i)

@@ -14,8 +14,19 @@ import sortData
 app = flask.Flask(__name__)
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
+
+def generateAIResponse(filmData):
+    response = [openai.Completion.create(
+        model = "text-davinci-003",
+        prompt = "Recommend the film {title} in a paragraph, emphasising its attributes described following: {attributes}.".format(title = filmData[x][0], 
+            attributes = re.sub(r'[_,]', lambda x: ' ' if x.group() == '_' else ', ', filmData[x][1])),
+        temperature = 0.6,
+        max_tokens = 250
+    ) for x in range(len(filmData))]
+    return(response)
+
 def findSimilarFilms(title):
-    cv = CountVectorizer(token_pattern=r"(?<![^\s_|])[^\W_]{1,}(?![^\s|_])")
+    cv = CountVectorizer()
     if not os.path.isfile("data/complete.csv"):
         data = sortData.main()
     else:
@@ -23,17 +34,10 @@ def findSimilarFilms(title):
     combinedData = []
     for dataI in data.index:
         try:
-            cleanTags = re.sub(r'[^\w\s]', '', data["tags"][dataI])
+             cleanGenres = re.sub(r'[^\w\s]', '_', data["genres"][dataI])
         except:
-            print("Could not get clean tag.", flush=True)
-        try:
-            cleanGenres = re.sub(r'[^\w\s]', '', data["genres"][dataI])
-        except:
-            print("Could not get clean genres.", flush=True)
-        try:
-            combinedData.append(str(cleanTags) + "_" + str(cleanGenres))
-        except:
-            print("Could not append to combinedData", flush=True)
+            pass
+        combinedData.append(str(data["tags"][dataI]))
         
     countMatrix = cv.fit_transform(combinedData)
     similarityScores = cosine_similarity(countMatrix)
@@ -47,15 +51,15 @@ def findSimilarFilms(title):
         weightedSimilarityScores.append(weightedSimilarity)
     
     similarFilms = sorted(list(enumerate(weightedSimilarityScores)), key=lambda x: x[1], reverse=True)[1:6]
-    similarFilms = [data.iloc[i[0]]['title'] for i in similarFilms]
-    print(similarFilms)
-    return(similarFilms)
+    similarFilms = [[data.iloc[i[0]]['title'], combinedData[i[0]]] for i in similarFilms]
+    response = generateAIResponse(similarFilms)
+    return(response)
 
 @app.route("/", methods=("POST", "GET"))
 def index():
     if flask.request.method == "POST":
         film = flask.request.form["film"]
-        return flask.render_template("index.html", result=findSimilarFilms(film))
+        return flask.render_template("index.html", result=[film, findSimilarFilms(film)])
     else:
         result = flask.request.args.get("result")
         return flask.render_template("index.html", result=result)

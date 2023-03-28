@@ -6,10 +6,10 @@
         <input type="submit" value="Select" />
     </form>
     {% if result %}
-    <div>The most similar films to the one you have selected are:
+    <div>Similar films to {{ result[0] }} are:
         <ul>
-            {% for film in result %}
-                <li>{{ film }}.</li>
+            {% for i in range(result[1]|length) %}
+                <li>{{ result[1][i].choices[0].text }}.</li>
             {% endfor %}
         </ul>
     </div>
