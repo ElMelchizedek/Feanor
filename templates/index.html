@@ -9,7 +9,8 @@
     <div>Similar films to {{ result[0] }} are:
         <ul>
             {% for i in range(result[1]|length) %}
-                <li>{{ result[1][i].choices[0].text }}.</li>
+                <li>{{ result[1][i].choices[0].text }}</li>
+                <br>
             {% endfor %}
         </ul>
     </div>

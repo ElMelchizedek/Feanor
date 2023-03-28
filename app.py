@@ -18,11 +18,16 @@ openai.api_key = os.getenv("OPENAI_API_KEY")
 def generateAIResponse(filmData):
     response = [openai.Completion.create(
         model = "text-davinci-003",
-        prompt = "Recommend the film {title} in a paragraph, emphasising its attributes described following: {attributes}.".format(title = filmData[x][0], 
-            attributes = re.sub(r'[_,]', lambda x: ' ' if x.group() == '_' else ', ', filmData[x][1])),
+        prompt = "Recommend the film {recTitle} in a long paragraph, emphasising its attributes described following: {recAttr}. Make sure to relate the recommendation back\
+            to the user-selected film {userTitle} and its attributes: {userAttr}. Do this all the while using your own knowledge as well, while keeping the response natural.".format(
+            recTitle = filmData[x][0], 
+            recAttr = re.sub(r'[_,]', lambda x: ' ' if x.group() == '_' else ', ', filmData[x][1]),
+            userTitle = filmData[0][0],
+            userAttr = re.sub(r'[_,]', lambda x: ' ' if x.group() == '_' else ', ', filmData[0][1])
+            ),
         temperature = 0.6,
-        max_tokens = 250
-    ) for x in range(len(filmData))]
+        max_tokens = 500
+    ) for x in range(1, len(filmData))]
     return(response)
 
 def findSimilarFilms(title):
@@ -52,7 +57,9 @@ def findSimilarFilms(title):
     
     similarFilms = sorted(list(enumerate(weightedSimilarityScores)), key=lambda x: x[1], reverse=True)[1:6]
     similarFilms = [[data.iloc[i[0]]['title'], combinedData[i[0]]] for i in similarFilms]
-    response = generateAIResponse(similarFilms)
+    filmData = [[data[data.title == title].title.values[0], combinedData[filmIndex]]]
+    filmData.extend([[similarFilms[x][0], similarFilms[x][1]] for x in range(len(similarFilms))])
+    response = generateAIResponse(filmData)
     return(response)
 
 @app.route("/", methods=("POST", "GET"))
